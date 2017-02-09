@@ -101,6 +101,7 @@ init_stream(Parent, Owner, StreamRef, Db, Options) ->
 
 do_init_stream(#state{mref=MRef,
                       db=Db,
+                      ref=Ref,
                       options=Options,
                       feed_type=FeedType}=State) ->
     #db{server=Server, options=ConnOpts} = Db,
@@ -135,6 +136,7 @@ do_init_stream(#state{mref=MRef,
     receive
         {'DOWN', MRef, _, _, _} ->
             %% parent exited there is no need to continue
+            ets:delete(couchbeam_changes_streams, Ref),
             exit(normal);
         {hackney_response, ClientRef, {status, 200, _}} ->
             State1 = State#state{client_ref=ClientRef},
@@ -162,6 +164,7 @@ loop(#state{owner=Owner,
     receive
         {'DOWN', MRef, _, _, _} ->
             %% parent exited there is no need to continue
+            ets:delete(couchbeam_changes_streams, StreamRef),
             exit(normal);
         {hackney_response, ClientRef, {headers, _Headers}} ->
             loop(State);
@@ -211,6 +214,7 @@ wait_reconnect(#state{parent=Parent,
     receive
         {'DOWN', MRef, _, _, _} ->
             %% parent exited there is no need to continue
+            ets:delete(couchbeam_changes_streams, Ref),
             exit(normal);
         {Ref, cancel} ->
             maybe_close(State),
@@ -301,6 +305,7 @@ maybe_continue(#state{parent=Parent,
     receive
         {'DOWN', MRef, _, _, _} ->
             %% parent exited there is no need to continue
+            ets:delete(couchbeam_changes_streams, Ref),
             exit(normal);
         {Ref, stream_next} ->
             loop(State);
@@ -330,6 +335,7 @@ maybe_continue(#state{parent=Parent,
     receive
         {'DOWN', MRef, _, _, _} ->
             %% parent exited there is no need to continue
+            ets:delete(couchbeam_changes_streams, Ref),
             exit(normal);
         {Ref, cancel} ->
             maybe_close(State),
@@ -470,6 +476,7 @@ maybe_continue_decoding(#state{parent=Parent,
     receive
         {'DOWN', MRef, _, _, _} ->
             %% parent exited there is no need to continue
+            ets:delete(couchbeam_changes_streams, Ref),
             exit(normal);
         {Ref, stream_next} ->
             {wait_results1, 0, [[]], St};
@@ -503,10 +510,12 @@ maybe_continue_decoding(#state{parent=Parent,
     receive
         {'DOWN', MRef, _, _, _} ->
             %% parent exited there is no need to continue
+            ets:delete(couchbeam_changes_streams, Ref),
             exit(normal);
         {Ref, cancel} ->
             hackney:close(ClientRef),
             Owner ! {Ref, ok},
+            ets:delete(couchbeam_changes_streams, Ref),
             exit(normal);
         {Ref, pause} ->
             erlang:hibernate(?MODULE, maybe_continue_decoding, [St]);
