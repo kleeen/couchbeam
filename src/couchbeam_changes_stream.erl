@@ -59,7 +59,7 @@ init_stream(Parent, Owner, StreamRef, Db, Options) ->
     %% feed type
     {FeedType, FinalOptions} = case proplists:get_value(feed, Options1) of
         undefined ->
-            {continuous, [{feed, continuous} | Options1]};
+            {longpoll, [{feed, longpoll} | Options1]};
         Type ->
             {Type, Options1}
     end,
